@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flow Memory System · Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Noto+Serif+SC:wght@300;400&display=swap');
+  :root {
+    --bg: #0a0a0f; --surface: #10101a; --surface2: #13131e;
+    --border: rgba(255,255,255,0.07); --text: #e8e8f0;
+    --muted: #6b6b80; --accent: #7dd3c8; --accent2: #a78bfa; --accent3: #f59e6b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 300; min-height: 100vh; }
+
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 48px; background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 20px; }
+  .back-link {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .back-link::before { content: '←'; }
+  .project-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); letter-spacing: 0.15em; text-transform: uppercase; }
+  .project-name-top { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+
+  .page { padding: 80px 0 60px; max-width: 1100px; margin: 0 auto; padding-left: 48px; padding-right: 48px; }
+
+  .hero-block { margin-bottom: 60px; }
+  .hero-tag { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px; }
+  .hero-title { font-family: 'Syne', sans-serif; font-size: 42px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; }
+  .hero-title span { color: var(--accent); }
+  .hero-desc { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.8; }
+
+  /* Three-column concept */
+  .concept-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 48px; }
+  .concept-card { background: var(--surface); padding: 28px 24px; }
+  .concept-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 12px; }
+  .concept-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .concept-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+  /* Flow card mockup */
+  .section-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 20px; }
+  .demo-area { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+
+  .flow-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 2px;
+    font-family: 'DM Mono', monospace; font-size: 12px; overflow: hidden;
+  }
+  .flow-card-header {
+    background: var(--surface2); padding: 10px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-card-filename { color: var(--accent); font-size: 11px; }
+  .flow-card-badge { font-size: 10px; color: var(--accent2); border: 1px solid rgba(167,139,250,0.25); padding: 2px 6px; border-radius: 2px; }
+  .flow-card-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .fc-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+  .fc-key { color: var(--muted); font-size: 11px; }
+  .fc-val { color: var(--text); font-size: 11px; line-height: 1.5; }
+  .fc-val .hl { color: var(--accent); }
+  .fc-val .hl2 { color: var(--accent2); }
+  .fc-val .hl3 { color: var(--accent3); }
+  .fc-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .fc-chip {
+    font-size: 10px; padding: 2px 6px; border-radius: 2px;
+    background: rgba(125,211,200,0.08); color: var(--accent); border: 1px solid rgba(125,211,200,0.15);
+  }
+  .fc-chip.purple { background: rgba(167,139,250,0.08); color: var(--accent2); border-color: rgba(167,139,250,0.15); }
+  .fc-chip.orange { background: rgba(245,158,107,0.08); color: var(--accent3); border-color: rgba(245,158,107,0.15); }
+
+  /* Metro map */
+  .metro-wrap { background: var(--surface); border: 1px solid var(--border); padding: 24px; position: relative; overflow: hidden; }
+  .metro-title { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 20px; }
+  .metro-svg-area { position: relative; height: 200px; }
+  .metro-node {
+    position: absolute; border-radius: 2px;
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    padding: 6px 12px; border: 1px solid; white-space: nowrap;
+    cursor: default; transition: opacity 0.2s;
+  }
+  .metro-node:hover { opacity: 0.8; }
+  .node-blue { background: rgba(125,211,200,0.1); color: var(--accent); border-color: rgba(125,211,200,0.3); }
+  .node-purple { background: rgba(167,139,250,0.1); color: var(--accent2); border-color: rgba(167,139,250,0.3); }
+  .node-orange { background: rgba(245,158,107,0.1); color: var(--accent3); border-color: rgba(245,158,107,0.3); }
+  .node-dim { background: rgba(255,255,255,0.03); color: var(--muted); border-color: var(--border); }
+
+  svg.metro-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  /* Q&A panel */
+  .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .qa-item { background: var(--surface); padding: 20px 24px; }
+  .qa-q { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2); margin-bottom: 8px; letter-spacing: 0.05em; }
+  .qa-a { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  @media (max-width: 768px) {
+    .top-bar { padding: 14px 20px; }
+    .page { padding: 80px 20px 40px; }
+    .concept-row { grid-template-columns: 1fr; }
+    .demo-area { grid-template-columns: 1fr; }
+    .qa-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <a class="back-link" href="index.html">返回主页</a>
+    <span style="color:var(--border)">|</span>
+    <span class="project-label">AI 工具 · 工程实验</span>
+    <span class="project-name-top">Flow Memory System</span>
+  </div>
+  <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;">v1.0 · Node.js</span>
+</div>
+
+<div class="page">
+
+  <div class="hero-block">
+    <div class="hero-tag">AI Coding Infrastructure</div>
+    <h1 class="hero-title">Flow Memory<br><span>System</span></h1>
+    <p class="hero-desc">为 AI 编程助手设计的项目上下文记忆层。以「业务流」而非目录结构组织项目，让 AI 在修改代码时不遗漏关联文件，精准定位影响范围。</p>
+  </div>
+
+  <div class="section-label">核心三层结构</div>
+  <div class="concept-row">
+    <div class="concept-card">
+      <div class="concept-num">01 · Flow Card</div>
+      <div class="concept-title">业务流卡片</div>
+      <p class="concept-desc">描述单条业务流的结构化定义。列出入口、触发器、步骤、输出、持久化信息、锚点文件与关联流。是 AI 理解功能边界的基本单元。</p>
+    </div>
+    <div class="concept-card">
+      <div class="concept-num">02 · Node Registry</div>
+      <div class="concept-title">节点注册表</div>
+      <p class="concept-desc">注册跨流共享的复用模块（状态容器、服务层、工具函数）。当 AI 修改某节点时，立即知道哪些流会受到影响，避免遗漏关联改动。</p>
+    </div>
+    <div class="concept-card">
+      <div class="concept-num">03 · Metro Map</div>
+      <div class="concept-title">全局地铁图</div>
+      <p class="concept-desc">连接所有业务流的全局视图，高亮标注流与流的交叉节点。提供项目级影响链路，让 AI 在调试时能评估跨流副作用。</p>
+    </div>
+  </div>
+
+  <div class="section-label">Flow Card 示例</div>
+  <div class="demo-area">
+    <div class="flow-card">
+      <div class="flow-card-header">
+        <span class="flow-card-filename">flows/user-auth.flow.json</span>
+        <span class="flow-card-badge">AUTH</span>
+      </div>
+      <div class="flow-card-body">
+        <div class="fc-row">
+          <span class="fc-key">flow_id</span>
+          <span class="fc-val"><span class="hl">user-auth</span></span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">entry_points</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip">/login</span>
+            <span class="fc-chip">/register</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">steps</span>
+          <span class="fc-val">
+            validate → <span class="hl2">authService</span> → <span class="hl">userStore</span> → redirect
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">anchor_files</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip">AuthPage.tsx</span>
+            <span class="fc-chip purple">authService.ts</span>
+            <span class="fc-chip purple">userStore.ts</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">shared_nodes</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip orange">apiClient</span>
+            <span class="fc-chip orange">tokenManager</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">related_flows</span>
+          <span class="fc-val"><span class="hl2">profile-edit</span> · <span class="hl2">session-refresh</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-header">
+        <span class="flow-card-filename">flows/order-submit.flow.json</span>
+        <span class="flow-card-badge">ORDER</span>
+      </div>
+      <div class="flow-card-body">
+        <div class="fc-row">
+          <span class="fc-key">flow_id</span>
+          <span class="fc-val"><span class="hl">order-submit</span></span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">entry_points</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip">/cart/checkout</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">steps</span>
+          <span class="fc-val">
+            validate → <span class="hl2">paymentService</span> → <span class="hl">orderStore</span> → notify
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">anchor_files</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip">CheckoutPage.tsx</span>
+            <span class="fc-chip purple">orderService.ts</span>
+            <span class="fc-chip purple">cartStore.ts</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">shared_nodes</span>
+          <span class="fc-val fc-list">
+            <span class="fc-chip orange">apiClient</span>
+            <span class="fc-chip orange">userStore</span>
+          </span>
+        </div>
+        <div class="fc-row">
+          <span class="fc-key">related_flows</span>
+          <span class="fc-val"><span class="hl2">user-auth</span> · <span class="hl2">inventory-check</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Metro Map · 全局流关系图</div>
+  <div class="metro-wrap" style="margin-bottom:48px;">
+    <div class="metro-title">project metro map · 6 flows · 4 shared nodes</div>
+    <div class="metro-svg-area">
+      <svg class="metro-lines">
+        <line x1="110" y1="30" x2="310" y2="90" stroke="rgba(125,211,200,0.2)" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="310" y1="90" x2="530" y2="30" stroke="rgba(125,211,200,0.2)" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="110" y1="30" x2="110" y2="145" stroke="rgba(167,139,250,0.2)" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="310" y1="90" x2="310" y2="145" stroke="rgba(245,158,107,0.3)" stroke-width="2"/>
+        <line x1="530" y1="30" x2="530" y2="145" stroke="rgba(167,139,250,0.2)" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="110" y1="145" x2="310" y2="145" stroke="rgba(125,211,200,0.15)" stroke-width="1" stroke-dasharray="3,4"/>
+        <line x1="310" y1="145" x2="530" y2="145" stroke="rgba(125,211,200,0.15)" stroke-width="1" stroke-dasharray="3,4"/>
+      </svg>
+      <div class="metro-node node-blue" style="top:14px;left:60px;">user-auth</div>
+      <div class="metro-node node-blue" style="top:14px;left:480px;">order-submit</div>
+      <div class="metro-node node-orange" style="top:72px;left:260px;">⬡ apiClient</div>
+      <div class="metro-node node-dim" style="top:14px;left:680px;">profile-edit</div>
+      <div class="metro-node node-purple" style="top:128px;left:60px;">session-refresh</div>
+      <div class="metro-node node-orange" style="top:128px;left:260px;">⬡ userStore</div>
+      <div class="metro-node node-dim" style="top:128px;left:480px;">inventory-check</div>
+    </div>
+  </div>
+
+  <div class="section-label">AI 可回答的四个关键问题</div>
+  <div class="qa-grid">
+    <div class="qa-item">
+      <div class="qa-q">Q1 · 这个需求属于哪条业务流？</div>
+      <p class="qa-a">通过 Flow Card 的 entry_points 和 steps 字段，AI 能快速将需求与业务流对应，不再猜测从哪个文件入手。</p>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q">Q2 · 涉及哪些文件和状态？</div>
+      <p class="qa-a">anchor_files 列出核心文件，shared_nodes 标注共享模块，AI 一次读取 Flow Card 即可掌握完整改动范围。</p>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q">Q3 · 这条流与其他流有共享吗？</div>
+      <p class="qa-a">Metro Map 高亮 Transfer Node，AI 能识别跨流公共依赖，修改 apiClient 时知道哪些流需要同步验证。</p>
+    </div>
+    <div class="qa-item">
+      <div class="qa-q">Q4 · 修改一处，影响哪些部分？</div>
+      <p class="qa-a">顺着 related_flows 与 shared_nodes 链路回溯，AI 输出完整影响链路清单，消除"改了这里忘了那里"的断层问题。</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

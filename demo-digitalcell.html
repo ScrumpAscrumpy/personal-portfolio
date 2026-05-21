@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字细胞生理 V3 · Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Noto+Serif+SC:wght@300;400&display=swap');
+  :root {
+    --bg: #060810; --surface: #0d0f18; --surface2: #111420;
+    --border: rgba(255,255,255,0.07); --text: #e8e8f0;
+    --muted: #5a5a72; --accent: #7dd3c8; --accent2: #a78bfa;
+    --accent3: #f59e6b; --green: #4ade80; --pink: #f472b6;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 300; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+  .top-bar {
+    flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 32px;
+    background: rgba(6,8,16,0.9); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border); z-index: 100;
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 16px; }
+  .back-link {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .back-link::before { content: '← '; }
+  .project-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--green); letter-spacing: 0.15em; text-transform: uppercase; }
+  .project-name-top { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); }
+
+  .main-layout { flex: 1; display: grid; grid-template-columns: 220px 1fr 200px; overflow: hidden; }
+
+  /* Left panel */
+  .left-panel {
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .panel-title { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 12px; }
+
+  .layer-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; border-radius: 2px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    border: none; background: transparent; color: var(--muted);
+    transition: all 0.15s; text-align: left; margin-bottom: 3px;
+  }
+  .layer-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .layer-btn.active { background: rgba(125,211,200,0.08); color: var(--accent); }
+  .layer-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .stat-val { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); }
+  .stat-bar { height: 2px; background: var(--border); border-radius: 1px; margin-bottom: 10px; overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 1px; }
+
+  /* Canvas area */
+  .canvas-area {
+    position: relative; background: #040508; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas#cellCanvas { position: absolute; top: 0; left: 0; }
+  .canvas-overlay-label {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(125,211,200,0.4);
+    letter-spacing: 0.15em; text-transform: uppercase; pointer-events: none;
+  }
+  .layer-indicator {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(125,211,200,0.5);
+    letter-spacing: 0.12em; text-transform: uppercase; pointer-events: none;
+    background: rgba(4,5,8,0.6); padding: 4px 12px; border-radius: 2px;
+    border: 1px solid rgba(125,211,200,0.12);
+  }
+
+  /* Right panel */
+  .right-panel {
+    background: var(--surface); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .event-item {
+    padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-family: 'DM Mono', monospace; font-size: 10px; line-height: 1.5;
+  }
+  .event-time { color: var(--muted); margin-bottom: 2px; }
+  .event-msg { color: var(--text); }
+  .event-msg.green { color: var(--green); }
+  .event-msg.cyan { color: var(--accent); }
+  .event-msg.purple { color: var(--accent2); }
+  .event-msg.orange { color: var(--accent3); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <a class="back-link" href="index.html">返回主页</a>
+    <span style="color:var(--border)">|</span>
+    <span class="project-label">生物模拟</span>
+    <span class="project-name-top">数字细胞生理 V3</span>
+  </div>
+  <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;">Python · 实时渲染 · 单细胞仿真</span>
+</div>
+
+<div class="main-layout">
+
+  <!-- Left: controls -->
+  <div class="left-panel">
+    <div class="panel-section">
+      <div class="panel-title">图层切换</div>
+      <button class="layer-btn active" onclick="setLayer(this,'综合')"><span class="layer-dot" style="background:#7dd3c8"></span>综合</button>
+      <button class="layer-btn" onclick="setLayer(this,'细胞器')"><span class="layer-dot" style="background:#a78bfa"></span>细胞器</button>
+      <button class="layer-btn" onclick="setLayer(this,'膜活动')"><span class="layer-dot" style="background:#f472b6"></span>膜活动</button>
+      <button class="layer-btn" onclick="setLayer(this,'形态素')"><span class="layer-dot" style="background:#f59e6b"></span>形态素</button>
+      <button class="layer-btn" onclick="setLayer(this,'电压')"><span class="layer-dot" style="background:#facc15"></span>电压</button>
+      <button class="layer-btn" onclick="setLayer(this,'运输')"><span class="layer-dot" style="background:#4ade80"></span>运输</button>
+      <button class="layer-btn" onclick="setLayer(this,'区域')"><span class="layer-dot" style="background:#38bdf8"></span>区域</button>
+      <button class="layer-btn" onclick="setLayer(this,'极性')"><span class="layer-dot" style="background:#fb923c"></span>极性</button>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">细胞生理状态</div>
+      <div class="stat-row"><span class="stat-label">ATP</span><span class="stat-val" id="v-atp">78%</span></div>
+      <div class="stat-bar"><div class="stat-fill" id="b-atp" style="width:78%;background:#4ade80"></div></div>
+      <div class="stat-row"><span class="stat-label">膜电位</span><span class="stat-val" id="v-volt">-62mV</span></div>
+      <div class="stat-bar"><div class="stat-fill" id="b-volt" style="width:60%;background:#facc15"></div></div>
+      <div class="stat-row"><span class="stat-label">渗透压</span><span class="stat-val" id="v-pres">291mOsm</span></div>
+      <div class="stat-bar"><div class="stat-fill" id="b-pres" style="width:55%;background:#7dd3c8"></div></div>
+      <div class="stat-row"><span class="stat-label">生长信号</span><span class="stat-val" id="v-growth">0.34</span></div>
+      <div class="stat-bar"><div class="stat-fill" id="b-growth" style="width:34%;background:#a78bfa"></div></div>
+      <div class="stat-row"><span class="stat-label">应激水平</span><span class="stat-val" id="v-stress">低</span></div>
+      <div class="stat-bar"><div class="stat-fill" id="b-stress" style="width:12%;background:#f59e6b"></div></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">节律状态</div>
+      <div class="stat-row"><span class="stat-label">ATP 节律</span><span class="stat-val" id="r-atp">↑</span></div>
+      <div class="stat-row"><span class="stat-label">修复节律</span><span class="stat-val" id="r-repair">→</span></div>
+      <div class="stat-row"><span class="stat-label">信号节律</span><span class="stat-val" id="r-signal">↓</span></div>
+    </div>
+  </div>
+
+  <!-- Center: canvas -->
+  <div class="canvas-area">
+    <canvas id="cellCanvas"></canvas>
+    <div class="layer-indicator" id="layerLabel">综合视图</div>
+    <div class="canvas-overlay-label">digital cell physiology v3 · real-time simulation</div>
+  </div>
+
+  <!-- Right: event log -->
+  <div class="right-panel">
+    <div class="panel-section">
+      <div class="panel-title">事件日志</div>
+    </div>
+    <div id="eventLog"></div>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('cellCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy, R;
+let t = 0;
+let currentLayer = '综合';
+
+function resize() {
+  const area = canvas.parentElement;
+  W = canvas.width = area.clientWidth;
+  H = canvas.height = area.clientHeight;
+  cx = W / 2; cy = H / 2;
+  R = Math.min(W, H) * 0.32;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Organelles
+const organelles = [
+  { name: '细胞核', x: 0, y: 0, r: 0.22, color: '#a78bfa', innerColor: '#c4b5fd', speed: 0.0003 },
+  { name: '线粒体1', x: 0.38, y: 0.12, r: 0.09, color: '#4ade80', speed: 0.0007, phase: 0 },
+  { name: '线粒体2', x: -0.3, y: -0.3, r: 0.08, color: '#4ade80', speed: 0.0005, phase: 1.2 },
+  { name: '线粒体3', x: 0.1, y: -0.42, r: 0.075, color: '#4ade80', speed: 0.0009, phase: 2.4 },
+  { name: 'ER', x: -0.18, y: 0.35, r: 0.11, color: '#38bdf8', speed: 0.0004, phase: 0.5 },
+];
+
+// Vesicles
+const vesicles = Array.from({length: 18}, (_, i) => ({
+  angle: (i / 18) * Math.PI * 2,
+  dist: 0.45 + Math.random() * 0.25,
+  r: 0.025 + Math.random() * 0.02,
+  speed: (0.0004 + Math.random() * 0.0006) * (Math.random() > 0.5 ? 1 : -1),
+  color: ['#7dd3c8','#a78bfa','#f59e6b','#4ade80'][Math.floor(Math.random()*4)],
+}));
+
+// Transport paths
+const paths = Array.from({length: 8}, (_, i) => ({
+  angle: (i / 8) * Math.PI * 2,
+  particles: Array.from({length: 3}, (_, j) => ({ pos: j / 3, speed: 0.003 + Math.random() * 0.002 })),
+}));
+
+function drawCell() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background glow
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.8);
+  bg.addColorStop(0, 'rgba(125,211,200,0.03)');
+  bg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Membrane glow
+  const memGlow = ctx.createRadialGradient(cx, cy, R * 0.85, cx, cy, R * 1.18);
+  memGlow.addColorStop(0, 'rgba(125,211,200,0.0)');
+  memGlow.addColorStop(0.5, 'rgba(125,211,200,0.06)');
+  memGlow.addColorStop(1, 'rgba(125,211,200,0.0)');
+  ctx.fillStyle = memGlow;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.18, 0, Math.PI * 2); ctx.fill();
+
+  // Membrane (animated, slightly irregular)
+  ctx.beginPath();
+  for (let a = 0; a <= Math.PI * 2; a += 0.04) {
+    const wobble = 1 + 0.015 * Math.sin(a * 6 + t * 0.8) + 0.008 * Math.sin(a * 11 + t * 1.3);
+    const x = cx + R * wobble * Math.cos(a);
+    const y = cy + R * wobble * Math.sin(a);
+    a === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const cellFill = ctx.createRadialGradient(cx, cy - R * 0.2, 0, cx, cy, R);
+  cellFill.addColorStop(0, 'rgba(20,25,45,0.92)');
+  cellFill.addColorStop(1, 'rgba(10,12,25,0.97)');
+  ctx.fillStyle = cellFill;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(125,211,200,0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Ion channels on membrane
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2 + t * 0.15;
+    const wobble = 1 + 0.015 * Math.sin(a * 6 + t * 0.8);
+    const x = cx + R * wobble * Math.cos(a);
+    const y = cy + R * wobble * Math.sin(a);
+    const open = Math.sin(a * 3 + t * 2) > 0.3;
+    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = open ? 'rgba(125,211,200,0.7)' : 'rgba(125,211,200,0.15)';
+    ctx.fill();
+  }
+
+  if (currentLayer === '综合' || currentLayer === '运输') {
+    // Transport paths
+    paths.forEach((path, pi) => {
+      const endDist = 0.72;
+      path.particles.forEach(p => {
+        p.pos = (p.pos + p.speed) % 1;
+        const dist = p.pos * endDist * R;
+        const x = cx + dist * Math.cos(path.angle + t * 0.001);
+        const y = cy + dist * Math.sin(path.angle + t * 0.001);
+        ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(74,222,128,0.6)';
+        ctx.fill();
+      });
+    });
+  }
+
+  if (currentLayer === '综合' || currentLayer === '细胞器') {
+    // Organelles
+    organelles.forEach((org, i) => {
+      const drift = Math.sin(t * org.speed * 1000 + i) * R * 0.03;
+      const ox = cx + org.x * R + drift;
+      const oy = cy + org.y * R + Math.cos(t * org.speed * 700 + i) * R * 0.02;
+      const or = org.r * R;
+
+      if (org.name === '细胞核') {
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, or);
+        g.addColorStop(0, 'rgba(196,181,253,0.35)');
+        g.addColorStop(0.6, 'rgba(167,139,250,0.2)');
+        g.addColorStop(1, 'rgba(167,139,250,0.05)');
+        ctx.beginPath(); ctx.arc(ox, oy, or, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = 'rgba(167,139,250,0.5)'; ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Nuclear pores
+        for (let p = 0; p < 10; p++) {
+          const pa = (p / 10) * Math.PI * 2;
+          const px = ox + or * Math.cos(pa); const py = oy + or * Math.sin(pa);
+          ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(196,181,253,0.5)'; ctx.fill();
+        }
+      } else if (org.name.startsWith('线粒体')) {
+        const pulse = 1 + 0.06 * Math.sin(t * 0.04 + (org.phase || 0));
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, or * pulse);
+        g.addColorStop(0, 'rgba(74,222,128,0.5)');
+        g.addColorStop(1, 'rgba(74,222,128,0.05)');
+        ctx.beginPath(); ctx.arc(ox, oy, or * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = `rgba(74,222,128,${0.3 + 0.2 * Math.sin(t*0.03+(org.phase||0))})`; ctx.lineWidth = 1;
+        ctx.stroke();
+      } else {
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, or);
+        g.addColorStop(0, 'rgba(56,189,248,0.35)');
+        g.addColorStop(1, 'rgba(56,189,248,0.05)');
+        ctx.beginPath(); ctx.arc(ox, oy, or, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = 'rgba(56,189,248,0.3)'; ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    });
+  }
+
+  if (currentLayer === '综合' || currentLayer === '细胞器') {
+    // Vesicles
+    vesicles.forEach(v => {
+      v.angle += v.speed;
+      const vx = cx + v.dist * R * Math.cos(v.angle);
+      const vy = cy + v.dist * R * Math.sin(v.angle);
+      const vr = v.r * R;
+      ctx.beginPath(); ctx.arc(vx, vy, vr, 0, Math.PI * 2);
+      ctx.fillStyle = v.color + '30'; ctx.fill();
+      ctx.strokeStyle = v.color + '70'; ctx.lineWidth = 0.8; ctx.stroke();
+    });
+  }
+
+  if (currentLayer === '电压') {
+    // Voltage gradient
+    for (let r2 = R * 0.1; r2 < R * 0.95; r2 += R * 0.08) {
+      const intensity = 1 - r2 / R;
+      const phase = t * 0.5 + r2 * 0.02;
+      const alpha = 0.04 + 0.03 * Math.sin(phase) * intensity;
+      ctx.beginPath(); ctx.arc(cx, cy, r2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(250,204,21,${alpha})`; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  }
+
+  if (currentLayer === '膜活动') {
+    // Membrane potential heat map
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2;
+      const activity = 0.5 + 0.5 * Math.sin(a * 4 + t * 1.5);
+      const wobble = 1 + 0.015 * Math.sin(a * 6 + t * 0.8);
+      const x = cx + R * wobble * Math.cos(a);
+      const y = cy + R * wobble * Math.sin(a);
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+      const r3 = Math.floor(244 * activity), gb = Math.floor(114 * (1-activity));
+      ctx.fillStyle = `rgba(${r3},${gb},182,0.8)`; ctx.fill();
+    }
+  }
+
+  t++;
+}
+
+function animate() { drawCell(); requestAnimationFrame(animate); }
+animate();
+
+// Stats animation
+const stats = {
+  atp: { el: 'v-atp', bar: 'b-atp', v: 78, unit: '%', color: '#4ade80', delta: 0.15 },
+  volt: { el: 'v-volt', bar: 'b-volt', v: 62, unit: 'mV', color: '#facc15', prefix: '-', delta: 0.08 },
+  pres: { el: 'v-pres', bar: 'b-pres', v: 291, unit: 'mOsm', color: '#7dd3c8', delta: 0.1 },
+  growth: { el: 'v-growth', bar: 'b-growth', v: 34, unit: '', color: '#a78bfa', delta: 0.05 },
+  stress: { el: 'v-stress', bar: 'b-stress', v: 12, unit: '', color: '#f59e6b', delta: 0.12 },
+};
+const rhythms = ['↑','→','↓','↗','↘'];
+function updateStats() {
+  Object.values(stats).forEach(s => {
+    s.v = Math.max(5, Math.min(98, s.v + (Math.random() - 0.5) * s.delta * 6));
+    const el = document.getElementById(s.el);
+    const bar = document.getElementById(s.bar);
+    if (s.el === 'v-stress') {
+      el.textContent = s.v < 25 ? '低' : s.v < 60 ? '中' : '高';
+    } else if (s.el === 'v-volt') {
+      el.textContent = `-${Math.round(s.v)}mV`;
+    } else if (s.el === 'v-growth') {
+      el.textContent = (s.v / 100).toFixed(2);
+    } else {
+      el.textContent = Math.round(s.v) + s.unit;
+    }
+    bar.style.width = s.v + '%';
+  });
+  const arrows = ['↑','→','↓'];
+  ['r-atp','r-repair','r-signal'].forEach(id => {
+    document.getElementById(id).textContent = arrows[Math.floor(Math.random()*3)];
+  });
+}
+setInterval(updateStats, 1200);
+
+// Event log
+const events = [
+  ['cyan','tRNA 扩散匹配成功 × 3'],
+  ['green','线粒体 ATP 合成 +2.1%'],
+  ['purple','核孔蛋白质运输 ×1'],
+  ['orange','膜电位波动 −3mV'],
+  ['cyan','囊泡向高尔基体靠近'],
+  ['green','修复节律触发'],
+  ['purple','ER 钙离子释放'],
+  ['cyan','运输通路拥堵缓解'],
+  ['orange','泛素标记蛋白降解 ×2'],
+  ['green','渗透压稳态恢复'],
+  ['purple','信号节律进入不应期'],
+  ['cyan','膜离子通道开放 ×7'],
+];
+let evIdx = 0;
+function addEvent() {
+  const log = document.getElementById('eventLog');
+  const e = events[evIdx % events.length]; evIdx++;
+  const now = new Date();
+  const ts = `${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const div = document.createElement('div');
+  div.className = 'event-item';
+  div.innerHTML = `<div class="event-time">${ts}</div><div class="event-msg ${e[0]}">${e[1]}</div>`;
+  log.insertBefore(div, log.firstChild);
+  if (log.children.length > 20) log.removeChild(log.lastChild);
+}
+setInterval(addEvent, 1800);
+addEvent();
+
+function setLayer(btn, layer) {
+  document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentLayer = layer;
+  document.getElementById('layerLabel').textContent = layer + '视图';
+}
+</script>
+</body>
+</html>

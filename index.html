@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>柯嘉慧 · 三态生物 — AI内容创作者</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&family=Noto+Serif+SC:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #10101a;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #7dd3c8;
+    --accent2: #a78bfa;
+    --accent3: #f59e6b;
+    --grid: rgba(255,255,255,0.025);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: 20%; left: -150px; }
+  .orb-3 { width: 300px; height: 300px; background: var(--accent3); bottom: -100px; right: 20%; }
+
+  /* Nav */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    background: rgba(10,10,15,0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* Main layout */
+  main {
+    position: relative;
+    z-index: 1;
+    padding-top: 80px;
+  }
+
+  section {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 80px 48px;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 120px;
+    padding-bottom: 80px;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 .name-cn {
+    display: block;
+    color: var(--text);
+  }
+
+  .hero h1 .name-en {
+    display: block;
+    font-size: 0.45em;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .hero-desc {
+    max-width: 520px;
+    margin-top: 40px;
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .hero-desc strong {
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .hero-cta {
+    margin-top: 56px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 28px;
+    border-radius: 2px;
+    transition: all 0.2s;
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: #9de8e0; transform: translateY(-1px); }
+
+  .btn-ghost {
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .hero-stats {
+    margin-top: 80px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    max-width: 560px;
+  }
+
+  .stat {
+    background: var(--bg);
+    padding: 24px;
+  }
+
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Section header */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  /* Framework section */
+  .framework-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .framework-card {
+    background: var(--surface);
+    padding: 32px;
+    transition: background 0.2s;
+  }
+  .framework-card:hover { background: #14141f; }
+
+  .framework-card-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .framework-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+
+  .framework-card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .framework-desc {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.85;
+    border-left: 2px solid var(--accent);
+    padding-left: 24px;
+    margin-bottom: 0;
+  }
+
+  /* Articles */
+  .articles-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .article-item {
+    background: var(--surface);
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 24px;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .article-item:hover { background: #13131e; }
+
+  .article-series {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent3);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .article-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+
+  .article-summary {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.65;
+    max-width: 580px;
+  }
+
+  .article-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .article-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .article-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    border: 1px solid rgba(125,211,200,0.2);
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+  }
+
+  /* About */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .about-text {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.85;
+  }
+
+  .about-text p + p { margin-top: 20px; }
+
+  .about-text strong {
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .skill-row {
+    background: var(--surface);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .skill-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .skill-bar {
+    width: 80px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .skill-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  /* Projects */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .project-card {
+    background: var(--surface);
+    padding: 32px;
+    transition: background 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  .project-card:hover { background: #14141f; }
+  .project-card:hover .project-highlight { color: var(--accent); }
+
+  .project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .project-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .project-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .project-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+  }
+
+  .stack-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    border: 1px solid rgba(167,139,250,0.2);
+    padding: 2px 7px;
+    border-radius: 2px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .project-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+    flex: 1;
+  }
+
+  .project-meta {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .project-highlight {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent3);
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 768px) {
+    .projects-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Contact */
+  .contact-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 56px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .contact-box h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+
+  .contact-box h2 span { color: var(--accent); }
+
+  .contact-box p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.75;
+    max-width: 400px;
+  }
+
+  .contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .contact-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .contact-link:hover { color: var(--accent); }
+
+  .contact-link-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* Footer */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 24px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  footer p {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-up {
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards;
+  }
+
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.25s; }
+  .delay-3 { animation-delay: 0.4s; }
+  .delay-4 { animation-delay: 0.55s; }
+  .delay-5 { animation-delay: 0.7s; }
+  .delay-6 { animation-delay: 0.85s; }
+
+  /* Cursor dot */
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 18px;
+    background: var(--accent);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    section { padding: 60px 24px; }
+    .hero h1 { font-size: 48px; }
+    .framework-grid { grid-template-columns: 1fr; }
+    .about-grid { grid-template-columns: 1fr; }
+    .contact-box { grid-template-columns: 1fr; padding: 36px 28px; }
+    .article-item { grid-template-columns: 1fr; }
+    .article-meta { text-align: left; }
+    .hero-stats { grid-template-columns: repeat(3, 1fr); }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<nav>
+  <div class="nav-logo">KJH · 三态生物</div>
+  <ul class="nav-links">
+    <li><a href="#framework">思想体系</a></li>
+    <li><a href="#articles">文章</a></li>
+    <li><a href="#projects">项目</a></li>
+    <li><a href="#about">关于</a></li>
+    <li><a href="#contact">联系</a></li>
+  </ul>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag fade-up">AI内容创作者 · 跨学科框架构建者</div>
+
+    <h1 class="fade-up delay-1">
+      <span class="name-cn">柯嘉慧<span class="cursor"></span></span>
+      <span class="name-en">Ke Jiahui · Thrimatter</span>
+    </h1>
+
+    <p class="hero-desc fade-up delay-2">
+      我在<strong>计算硬件、生物底层逻辑与人工智能架构</strong>的交汇处写作。<br>
+      不转述别人的结论——而是从第一性原理出发，<strong>重新推演这个时代的运行逻辑</strong>。<br>
+      笔名：三态生物 / ScrumpAscrumpy Thrimatter
+    </p>
+
+    <div class="hero-cta fade-up delay-3">
+      <a href="#articles" class="btn btn-primary">查看文章体系</a>
+      <a href="#contact" class="btn btn-ghost">联系我</a>
+    </div>
+
+    <div class="hero-stats fade-up delay-4">
+      <div class="stat">
+        <span class="stat-num">15+</span>
+        <span class="stat-label">原创文章</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">6</span>
+        <span class="stat-label">独立项目</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">4yr</span>
+        <span class="stat-label">持续输出</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- FRAMEWORK -->
+  <section id="framework">
+    <div class="section-header">
+      <span class="section-num">01 /</span>
+      <h2 class="section-title">思想框架</h2>
+    </div>
+
+    <p class="framework-desc" style="margin-bottom: 40px;">
+      我的文章不是孤立的科普，而是围绕一个核心问题展开的系统性思考：<br>
+      <strong style="color: var(--text);">当生物逻辑、计算架构、与物理底层发生共鸣时，下一代智能系统会长什么样？</strong>
+    </p>
+
+    <div class="framework-grid">
+      <div class="framework-card">
+        <div class="framework-card-tag">核心论点 I</div>
+        <h3>三态逻辑的统一性</h3>
+        <p>从DNA的伪三进制编码（A-T / C-G / 错误配对），到平衡三进制计算机，到量子三态（-1/0/+1）——三进制不是技术选择，是物质世界信息编码的自然倾向。</p>
+      </div>
+      <div class="framework-card">
+        <div class="framework-card-tag">核心论点 II</div>
+        <h3>算法应当向生物学习</h3>
+        <p>大语言模型只是模拟了大脑角回区的一小块。真正的智能来自多算法、多模态的分布式并行。单一Transformer堆算力，是在用暴力替代进化。</p>
+      </div>
+      <div class="framework-card">
+        <div class="framework-card-tag">核心论点 III</div>
+        <h3>存算一体是下一个硬件范式</h3>
+        <p>冯·诺依曼架构把计算和存储分离，99.998%的能量耗在"跑腿"上。忆阻器阵列让数据不动、原地计算——理论能效相比H200高5亿倍。</p>
+      </div>
+      <div class="framework-card">
+        <div class="framework-card-tag">核心论点 IV</div>
+        <h3>跨学科映射是突破的方法论</h3>
+        <p>蛋白质折叠 → 硬件拓扑结构设计；布朗运动容错机制 → 热力学芯片的分布式调控；极化子探针 → 量子医学传感器。物理相通，学科是人划的界。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ARTICLES -->
+  <section id="articles">
+    <div class="section-header">
+      <span class="section-num">02 /</span>
+      <h2 class="section-title">文章体系</h2>
+    </div>
+
+    <div class="articles-grid">
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/r0Ibp8w7QkI0MX0rvizaFQ" target="_blank">
+        <div>
+          <div class="article-series">三态智能系列 · I</div>
+          <div class="article-title">Trionics：三元态智能的构想——人工智能新基态</div>
+          <div class="article-summary">从DNA的伪三进制编码出发，提出计算范式从二进制向三元态演进的路径预测：平衡三进制 → 理想三进制 → 三元态智能体。苏联Setun计算机的技术遗产与当代光量子器件的接续。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.05</span>
+          <span class="article-tag">硬件架构</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/hnjpEuL51luLMbkHO8cIdA" target="_blank">
+        <div>
+          <div class="article-series">三态智能系列 · II</div>
+          <div class="article-title">基于电子能级跃迁的三进制光计算硬件单元方案设计</div>
+          <div class="article-summary">利用电子在光子作用下的能级跃迁（基态→激发态1→激发态2）实现三进制状态（-1/0/+1）的稳定编码。双量子阱结构与能级锚定激光设计，提出具体的硬件实现路径。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.06</span>
+          <span class="article-tag">方案设计</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/-DO3VLHIW0f_qSjktxwHaw" target="_blank">
+        <div>
+          <div class="article-series">三态智能系列 · III</div>
+          <div class="article-title">光计算×三进制算法模式 = 新型人机超级大脑</div>
+          <div class="article-summary">从脑机接口技术现状出发，构想外接第二大脑系统。三进制静默态可重构纵横网络架构的设计逻辑，以及对阿尔茨海默症的BCI混合记忆系统治疗路径探讨。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.06</span>
+          <span class="article-tag">BCI · 医疗</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/1Ia0tCowX41eNajxrT25xg" target="_blank">
+        <div>
+          <div class="article-series">计算架构批判系列 · I</div>
+          <div class="article-title">大语言模型方向也许就是错的</div>
+          <div class="article-summary">从神经科学角度拆解Transformer的局限：它只模拟了人类大脑角回区的一小块，却消耗了整个数据中心。提出"物质意识模型"的替代路径——先建立对世界的认知框架，再将语言作为表达工具。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.05</span>
+          <span class="article-tag">AI批判</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/H72BT-nclUxYjdoL8YC5aw" target="_blank">
+        <div>
+          <div class="article-series">计算架构批判系列 · II</div>
+          <div class="article-title">不要指望用一种算法概括多种模态</div>
+          <div class="article-summary">人脑有十数种已知神经通路（边缘环路、多巴胺通路、默认模式网络……），每条都是独立算法。用单一Transformer替代多算法多模态系统，是在用暴力算力填补算法设计的空白。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.07</span>
+          <span class="article-tag">神经科学</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/V1oYgjv9B-nqjrAlX8oMjA" target="_blank">
+        <div>
+          <div class="article-series">硬件与生物映射系列 · I</div>
+          <div class="article-title">从蛋白质折叠到人工智能硬件的协同设计</div>
+          <div class="article-summary">厚纸板折叠学与蛋白质空间结构具有相同的优化逻辑。推论：既然蛋白质折叠的数学公式可以用工程方法推导，那么算力硬件也可以进行三维空间拓扑结构设计，实现体积微小化、算力巨量化。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.09</span>
+          <span class="article-tag">硬件拓扑</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/Ex878nIX0ZP-HRfbUB6nXg" target="_blank">
+        <div>
+          <div class="article-series">硬件与生物映射系列 · II</div>
+          <div class="article-title">布朗运动为基础的随机扩散热力学细胞芯片探索机制</div>
+          <div class="article-summary">细胞内tRNA的随机扩散-匹配机制、分子伴侣容错系统、泛素-蛋白酶体回收系统——这套"接受错误，以此为代价换取低维护能耗"的逻辑，可以直接指导热力学芯片的分布式自适应设计。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.11</span>
+          <span class="article-tag">热力学芯片</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/4Il7z_rqCYVVt4xW2Dv12Q" target="_blank">
+        <div>
+          <div class="article-series">前沿进展解读系列</div>
+          <div class="article-title">5亿倍能效（？）的存算一体机器人构想</div>
+          <div class="article-summary">解读《垂直自整流忆阻存储阵列》论文，用宿舍楼模型讲清3D忆阻器的工作原理，并对忆阻器阵列与H200的能效差距做了量化思想实验：理论峰值差距5亿倍，实际系统级仍高出百至万倍量级。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.11</span>
+          <span class="article-tag">前沿解读</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/lx42bQrA1PUzkA-kmUR32w" target="_blank">
+        <div>
+          <div class="article-series">前沿进展解读系列</div>
+          <div class="article-title">DeepSeek新论文：DualPath双路径架构让AI吞吐量提升1.87倍</div>
+          <div class="article-summary">用外卖员与预制菜工厂的比喻，解构DeepSeek DualPath架构如何通过软件层优化将KV存储带宽利用率从40%提升至80%，让660B模型在64K上下文下吞吐量提升1.87倍。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2026.02</span>
+          <span class="article-tag">模型架构</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/GqpKiAjdmVh30ydSgL7gRQ" target="_blank">
+        <div>
+          <div class="article-series">计算架构批判系列 · III</div>
+          <div class="article-title">首个"赛博果蝇"诞生，但拆解钢琴的方式，是永远无法理解音乐的</div>
+          <div class="article-summary">以首个数字生命体的诞生为切入点，追问：对生命进行逆向工程式的拆解，能否真正理解生命？类比到AI——穷举参数堆叠，与理解智能的底层逻辑，是两件根本不同的事。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.11</span>
+          <span class="article-tag">AI批判</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/fML0tL5FzzREUNY-0o2ATA" target="_blank">
+        <div>
+          <div class="article-series">人物与趋势系列</div>
+          <div class="article-title">劳伦特·西蒙斯（Laurent Simons）15岁量子物理博士为何转攻AI医学博士？</div>
+          <div class="article-summary">解读"神童"劳伦特的职业转向背后的逻辑：量子物理与AI医学的交叉地带，正在成为下一代科学突破的核心战场。个人路径选择背后的学科趋势判断。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.09</span>
+          <span class="article-tag">人物解读</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/xDIY84iazc9HiMqGMdD0_g" target="_blank">
+        <div>
+          <div class="article-series">三态智能系列 · IV</div>
+          <div class="article-title">3态粒子催化变革机构想</div>
+          <div class="article-summary">从三态粒子的物理特性出发，构想一种以三态为基本单元的催化变革机制——信息编码、能量转换与物质结构三者之间存在可统一的底层对称性。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.10</span>
+          <span class="article-tag">物理构想</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/G_WQ91J61Qeo4V8QLJXudg" target="_blank">
+        <div>
+          <div class="article-series">前沿进展解读系列</div>
+          <div class="article-title">一文看懂量子计算机工作原理</div>
+          <div class="article-summary">从经典比特的确定性，到量子比特的叠加态、纠缠与干涉——用类比和图像讲清量子计算的运算逻辑，以及当前量子计算机的实现路径与工程瓶颈。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.08</span>
+          <span class="article-tag">量子计算</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/deAZovhEG0oXpFS9NU2XGw" target="_blank">
+        <div>
+          <div class="article-series">前沿进展解读系列</div>
+          <div class="article-title">新材料发现速度提升10000倍——英伟达打造材料界的"AlphaFold工业版"</div>
+          <div class="article-summary">解读英伟达 Generative Materials AI 平台如何将新材料发现效率提升万倍。从传统实验室试错到生成式AI预测，材料科学正在经历与蛋白质折叠类似的范式跃迁。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.12</span>
+          <span class="article-tag">前沿解读</span>
+        </div>
+      </a>
+
+      <a class="article-item" href="https://mp.weixin.qq.com/s/VYEsRzjCVSUy0w211CArHQ" target="_blank">
+        <div>
+          <div class="article-series">硬件与生物映射系列 · III</div>
+          <div class="article-title">AlphaFold对蛋白质预测的模型分析</div>
+          <div class="article-summary">拆解 AlphaFold 2 的注意力机制与多序列比对策略，分析其预测精度背后的算法逻辑，并探讨 AlphaFold 的方法论对其他复杂系统建模（包括硬件设计和药物研发）的迁移价值。</div>
+        </div>
+        <div class="article-meta">
+          <span class="article-date">2025.10</span>
+          <span class="article-tag">模型分析</span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- PROJECTS -->
+  <section id="projects">
+    <div class="section-header">
+      <span class="section-num">03 /</span>
+      <h2 class="section-title">项目实践</h2>
+    </div>
+
+    <p class="framework-desc" style="margin-bottom: 40px;">
+      用 AI Coding 工具独立构建的实验性项目——从系统设计到落地验证，探索思想框架的工程化可能。点击任意卡片查看交互 Demo。
+    </p>
+
+    <div class="projects-grid">
+
+      <a class="project-card" href="demo-synapselab.html" target="_blank">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">跨学科平台 · 线上运行</div>
+            <div class="project-name">SynapseLab</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">React</span>
+            <span class="stack-tag">CloudBase</span>
+            <span class="stack-tag">图谱</span>
+          </div>
+        </div>
+        <p class="project-desc">连接研究者、研究想法、项目与论文的跨学科协作平台。核心功能：构想空间、研究工作室、学者图谱（全屏沉浸模式）、论文关联与 CloudBase 云端集成。已部署上线。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看 Live Demo →</span>
+        </div>
+      </a>
+
+      <a class="project-card" href="demo-flowmemory.html" target="_blank">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">AI 工具 · 工程实验</div>
+            <div class="project-name">Flow Memory System</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">Node.js</span>
+            <span class="stack-tag">Schema</span>
+          </div>
+        </div>
+        <p class="project-desc">为 AI 编程助手设计的项目上下文记忆层。以「业务流」而非目录结构组织项目，让 AI 在修改代码时不遗漏关联文件。核心产物：Flow Card、Node Registry、Metro Map 三层结构。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看概念 Demo →</span>
+        </div>
+      </a>
+
+      <a class="project-card" href="demo-digitalcell.html" target="_blank">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">生物模拟 · 可视化</div>
+            <div class="project-name">数字细胞生理 V3</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">Python</span>
+            <span class="stack-tag">实时渲染</span>
+          </div>
+        </div>
+        <p class="project-desc">单个自治数字细胞的生理仿真实验。实现稳态负反馈、细胞器实体、布朗运动式随机扩散运输、生物电反应扩散、异步节律等机制，以显微成像风格实时渲染细胞内部动态。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看交互 Demo →</span>
+        </div>
+      </a>
+
+      <a class="project-card" href="demo-vibebattle.html" target="_blank">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">全栈 Web · MVP</div>
+            <div class="project-name">VibeBattle</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">React</span>
+            <span class="stack-tag">Node.js</span>
+            <span class="stack-tag">PostgreSQL</span>
+          </div>
+        </div>
+        <p class="project-desc">Vibe Coding 竞赛平台 MVP。前端 Vite + React，后端 Node.js + Express，数据库 PostgreSQL + Prisma，支持 Docker 本地部署与 Render + Neon 线上部署的双轨环境。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看界面 Demo →</span>
+        </div>
+      </a>
+
+      <a class="project-card" href="demo-docfiller.html" target="_blank">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">桌面端 · Electron</div>
+            <div class="project-name">DocFiller</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">Electron</span>
+            <span class="stack-tag">React</span>
+            <span class="stack-tag">TypeScript</span>
+          </div>
+        </div>
+        <p class="project-desc">本地桌面端文档填写工具 MVP。三栏布局支持模版管理、字段定义、文档列表与映射关系，集成预览、备忘录与历史记录，全量本地持久化，为后续 Flow Memory 接入预留接口。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看界面 Demo →</span>
+        </div>
+      </a>
+
+      <a class="project-card" href="demo-softwarefactory.html" target="_blank" style="grid-column: 1 / -1;">
+        <div class="project-header">
+          <div>
+            <div class="project-tag">AI 流水线 · 全链路自动化</div>
+            <div class="project-name">SoftwareFactory · 自动化软件设计工厂</div>
+          </div>
+          <div class="project-stack">
+            <span class="stack-tag">React</span>
+            <span class="stack-tag">TypeScript</span>
+            <span class="stack-tag">Node.js</span>
+            <span class="stack-tag">Claude / GPT-4</span>
+          </div>
+        </div>
+        <p class="project-desc">12 个 AI 角色组成的软件开发全链路流水线：需求分析师 → 产品设计师 → UI 设计师 → 架构设计师 → 环境配置师 → 程序员 → 测试员 → GitHub 助手 → 云端部署师 → 运营规划师 → 多平台分发 → 数据分析师。每个角色与用户对话、确认产物后自动将上下文同步至「项目记忆」，驱动下一阶段的 AI 决策，实现从一句话想法到线上产品的端到端自动化。</p>
+        <div class="project-meta">
+          <span class="project-highlight">查看交互 Demo →</span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="section-header">
+      <span class="section-num">04 /</span>
+      <h2 class="section-title">关于我</h2>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-text">
+        <p>
+          我的背景横跨<strong>医学科研（广州中医药大学针灸推拿学）</strong>与<strong>计算机科学（广东工业大学，在读2024-2027）</strong>，并在政务中心从事了四年窗口行政工作。
+        </p>
+        <p>
+          这个看似跳跃的组合，反而给了我一个独特的视角：我既理解生物学的底层机制，又在追踪计算架构的前沿进展，同时具备将复杂技术转化为可读内容的实战能力。
+        </p>
+        <p>
+          我写作的驱动力，来自一个长期困扰我的问题：<strong>现在的AI发展路径，真的是正确的吗？</strong>我在持续尝试用第一性原理来回答它。
+        </p>
+        <p>
+          熟练使用 <strong>AI Coding 工具</strong>（Claude、Cursor）进行内容辅助、方案结构设计与文档撰写，具备将技术概念翻译为非技术语言的能力。
+        </p>
+      </div>
+
+      <div>
+        <div class="skills-list">
+          <div class="skill-row">
+            <span class="skill-name">跨学科框架构建</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:92%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">技术内容写作</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:88%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">论文快速解读</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">AI Coding 工具使用</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">生物医学背景</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:82%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">计算机科学（在学）</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:65%"></div></div>
+          </div>
+          <div class="skill-row">
+            <span class="skill-name">政务流程协调</span>
+            <div class="skill-bar"><div class="skill-fill" style="width:90%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="contact-box">
+      <div>
+        <h2>如果你也在<br>追问同样的问题<span>.</span></h2>
+        <p>我在寻找能让思想真正落地的位置——一个允许跨学科输出、鼓励原创框架、并将内容能力和技术理解同等对待的地方。</p>
+        <br>
+        <a href="mailto:scrumpykk@gmail.com" class="btn btn-primary" style="margin-top: 8px;">发送邮件</a>
+      </div>
+      <div class="contact-links">
+        <a class="contact-link" href="mailto:scrumpykk@gmail.com">
+          <span class="contact-link-dot"></span>
+          scrumpykk@gmail.com
+        </a>
+        <a class="contact-link" href="mailto:854190624@qq.com">
+          <span class="contact-link-dot"></span>
+          854190624@qq.com
+        </a>
+        <a class="contact-link" href="https://mp.weixin.qq.com/s/r0Ibp8w7QkI0MX0rvizaFQ" target="_blank">
+          <span class="contact-link-dot"></span>
+          公众号：三态生物
+        </a>
+        <a class="contact-link" href="https://xhslink.com/m/2XFgbpJivul" target="_blank">
+          <span class="contact-link-dot"></span>
+          小红书：脑子里有无限宇宙
+        </a>
+        <a class="contact-link" href="https://xhslink.com/m/3vRCdnRS27n" target="_blank">
+          <span class="contact-link-dot"></span>
+          小红书：ScrumpAscrumpY
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>© 2026 柯嘉慧 · 三态生物 · Thrimatter</p>
+  <p>个人观点，持续更新</p>
+</footer>
+
+<script>
+  // Scroll-triggered fade for sections
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.framework-card, .article-item, .skill-row, .project-card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(16px)';
+    el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    observer.observe(el);
+  });
+</script>
+
+</body>
+</html>

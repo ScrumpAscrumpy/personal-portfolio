@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynapseLab · Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Noto+Serif+SC:wght@300;400&display=swap');
+  :root {
+    --bg: #0a0a0f; --surface: #10101a; --border: rgba(255,255,255,0.07);
+    --text: #e8e8f0; --muted: #6b6b80; --accent: #7dd3c8;
+    --accent2: #a78bfa; --accent3: #f59e6b;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 300; }
+
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 48px;
+    background: rgba(10,10,15,0.85); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 20px; }
+  .back-link {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .back-link::before { content: '←'; }
+  .project-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; }
+  .project-name-top { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600; color: var(--text); }
+  .live-badge {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: #4ade80;
+    border: 1px solid rgba(74,222,128,0.3); padding: 3px 10px; border-radius: 2px;
+    letter-spacing: 0.1em; display: flex; align-items: center; gap: 6px;
+  }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .layout { display: grid; grid-template-columns: 280px 1fr; height: 100vh; padding-top: 57px; }
+
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 32px 24px; display: flex; flex-direction: column; gap: 32px;
+    overflow-y: auto;
+  }
+  .sidebar-section-title {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+    letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .project-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 12px; }
+  .project-subtitle { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2); letter-spacing: 0.1em; margin-bottom: 16px; }
+  .desc { font-size: 13px; color: var(--muted); line-height: 1.75; }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    padding: 3px 8px; border-radius: 2px; letter-spacing: 0.06em;
+  }
+  .tag-blue { color: var(--accent); border: 1px solid rgba(125,211,200,0.25); }
+  .tag-purple { color: var(--accent2); border: 1px solid rgba(167,139,250,0.25); }
+  .tag-orange { color: var(--accent3); border: 1px solid rgba(245,158,107,0.25); }
+
+  .feature-list { display: flex; flex-direction: column; gap: 10px; }
+  .feature-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .feature-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
+
+  .open-btn {
+    display: block; text-align: center; font-family: 'DM Mono', monospace;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 12px; background: var(--accent); color: var(--bg);
+    text-decoration: none; border-radius: 2px; font-weight: 500;
+    transition: background 0.2s;
+  }
+  .open-btn:hover { background: #9de8e0; }
+
+  .iframe-wrap { position: relative; width: 100%; height: 100%; background: var(--bg); }
+  .iframe-wrap iframe {
+    width: 100%; height: 100%; border: none;
+    display: block;
+  }
+  .iframe-overlay {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 12px 20px;
+    background: linear-gradient(to bottom, rgba(10,10,15,0.6), transparent);
+    pointer-events: none;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .sidebar { padding: 24px; }
+    .top-bar { padding: 14px 20px; }
+    .iframe-wrap { min-height: 60vh; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <a class="back-link" href="index.html">返回主页</a>
+    <span style="color:var(--border)">|</span>
+    <span class="project-label">跨学科平台</span>
+    <span class="project-name-top">SynapseLab</span>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span>线上运行中</div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div>
+      <div class="sidebar-section-title">项目简介</div>
+      <div class="project-title">SynapseLab</div>
+      <div class="project-subtitle">跨学科研究协作平台</div>
+      <p class="desc">连接研究者、研究想法、项目、论文与 AI 工作流的统一知识网络。解决研究协作中的三个核心痛点：想法散落难以持续验证、跨学科连接难以建立、项目与人脉从未呈现为一个结构化网络。</p>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">技术栈</div>
+      <div class="tag-list">
+        <span class="tag tag-blue">React</span>
+        <span class="tag tag-blue">Vite</span>
+        <span class="tag tag-purple">CloudBase</span>
+        <span class="tag tag-orange">知识图谱</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sidebar-section-title">已实现功能</div>
+      <div class="feature-list">
+        <div class="feature-item"><span class="feature-dot"></span>首页平台介绍与视觉语言</div>
+        <div class="feature-item"><span class="feature-dot"></span>构想空间：发布与讨论研究假设</div>
+        <div class="feature-item"><span class="feature-dot"></span>研究工作室：项目创建与关联</div>
+        <div class="feature-item"><span class="feature-dot"></span>学者图谱：全屏沉浸式关系网络</div>
+        <div class="feature-item"><span class="feature-dot"></span>通知中心与个人主页</div>
+        <div class="feature-item"><span class="feature-dot"></span>CloudBase 云函数与数据库集成</div>
+      </div>
+    </div>
+
+    <a class="open-btn" href="https://synapse-lab-1ghlp8bp8f847812-1257009542.tcloudbaseapp.com" target="_blank">在新窗口打开 ↗</a>
+  </div>
+
+  <div class="iframe-wrap">
+    <div class="iframe-overlay">live demo · synapse-lab · tcloudbaseapp.com</div>
+    <iframe
+      src="https://synapse-lab-1ghlp8bp8f847812-1257009542.tcloudbaseapp.com"
+      title="SynapseLab Live Demo"
+      loading="lazy"
+    ></iframe>
+  </div>
+</div>
+
+</body>
+</html>

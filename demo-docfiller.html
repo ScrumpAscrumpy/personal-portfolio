@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocFiller · Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Noto+Serif+SC:wght@300;400&display=swap');
+  :root {
+    --bg: #0a0a0f; --surface: #10101a; --surface2: #13131e; --surface3: #0d0d16;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.04);
+    --text: #e8e8f0; --muted: #6b6b80; --muted2: #4a4a60;
+    --accent: #7dd3c8; --accent2: #a78bfa; --accent3: #f59e6b; --green: #4ade80;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Serif SC', serif; font-weight: 300; display: flex; flex-direction: column; }
+
+  /* Top chrome */
+  .top-bar {
+    flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;
+    padding: 13px 28px; background: rgba(10,10,15,0.92); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border); z-index: 100;
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 14px; }
+  .back-link {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--accent); }
+  .back-link::before { content: '← '; }
+  .project-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent3); letter-spacing: 0.15em; text-transform: uppercase; }
+  .project-name-top { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+
+  /* App title bar */
+  .app-titlebar {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 44px; background: var(--surface3); border-bottom: 1px solid var(--border);
+  }
+  .app-titlebar-left { display: flex; align-items: center; gap: 16px; }
+  .app-logo { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .app-logo span { color: var(--accent3); }
+  .mode-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+  .mode-btn {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 14px; background: transparent; border: none; color: var(--muted); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active { background: rgba(245,158,107,0.12); color: var(--accent3); }
+  .titlebar-actions { display: flex; gap: 8px; }
+  .tb-btn {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 12px; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); border-radius: 2px; cursor: pointer; transition: all 0.15s;
+  }
+  .tb-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  .tb-btn.primary { background: var(--accent3); color: var(--bg); border-color: var(--accent3); font-weight: 500; }
+  .tb-btn.primary:hover { background: #fbbf73; }
+
+  /* Main three-column layout */
+  .app-shell { flex: 1; display: grid; grid-template-columns: 220px 1fr 280px; overflow: hidden; }
+
+  /* Left: template + doc list */
+  .left-col {
+    background: var(--surface3); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .col-section { display: flex; flex-direction: column; overflow: hidden; }
+  .col-section.flex1 { flex: 1; overflow: hidden; }
+  .col-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .col-header-title { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; }
+  .col-add-btn {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2);
+    background: none; border: none; cursor: pointer; padding: 2px 4px; transition: color 0.15s;
+  }
+  .col-add-btn:hover { color: var(--accent3); }
+  .col-list { overflow-y: auto; flex: 1; }
+
+  .tpl-item {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    cursor: pointer; border-bottom: 1px solid var(--border2); transition: background 0.12s;
+  }
+  .tpl-item:hover { background: rgba(255,255,255,0.03); }
+  .tpl-item.active { background: rgba(245,158,107,0.06); }
+  .tpl-icon { width: 24px; height: 24px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .tpl-info { flex: 1; min-width: 0; }
+  .tpl-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .tpl-meta { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted2); }
+
+  .doc-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+    cursor: pointer; border-bottom: 1px solid var(--border2); transition: background 0.12s;
+  }
+  .doc-item:hover { background: rgba(255,255,255,0.03); }
+  .doc-item.active { background: rgba(125,211,200,0.05); border-left: 2px solid var(--accent); }
+  .doc-status { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .doc-name { font-size: 12px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-pct { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* Center: fill form */
+  .center-col {
+    background: var(--surface); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .center-header {
+    flex-shrink: 0; padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .center-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; }
+  .progress-pill {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--accent3);
+    background: rgba(245,158,107,0.08); border: 1px solid rgba(245,158,107,0.2);
+    padding: 3px 10px; border-radius: 10px; letter-spacing: 0.06em;
+  }
+  .field-list { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .field-group {}
+  .field-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .field-required { color: var(--accent3); }
+  .field-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Noto Serif SC', serif; font-size: 13px; font-weight: 300;
+    padding: 9px 12px; border-radius: 2px; outline: none; transition: border-color 0.15s;
+  }
+  .field-input:focus { border-color: rgba(245,158,107,0.4); }
+  .field-input.filled { border-color: rgba(74,222,128,0.25); background: rgba(74,222,128,0.03); }
+  .field-input::placeholder { color: var(--muted2); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px;
+    padding: 9px 12px; border-radius: 2px; outline: none; appearance: none;
+    cursor: pointer;
+  }
+  .field-textarea {
+    resize: none; height: 72px; line-height: 1.6;
+  }
+  .field-hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); margin-top: 4px; }
+
+  /* Right: preview + memo + history */
+  .right-col {
+    background: var(--surface3); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .right-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .right-tab {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 10px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent;
+    transition: all 0.15s; flex: 1; text-align: center;
+  }
+  .right-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .right-panel { display: none; flex: 1; overflow-y: auto; padding: 16px; }
+  .right-panel.active { display: block; }
+
+  /* Preview */
+  .preview-doc {
+    background: #fff; border-radius: 2px; padding: 28px 24px;
+    font-family: 'Noto Serif SC', serif; font-size: 12px; color: #1a1a2e;
+    line-height: 1.8;
+  }
+  .preview-doc h4 { font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 16px; letter-spacing: 0.05em; }
+  .preview-field { display: flex; gap: 0; margin-bottom: 10px; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; }
+  .pf-label { width: 90px; font-size: 11px; color: #888; flex-shrink: 0; }
+  .pf-value { font-size: 12px; color: #1a1a2e; font-weight: 400; }
+  .pf-empty { color: #ccc; font-style: italic; }
+  .preview-sig { margin-top: 24px; display: flex; justify-content: space-between; font-size: 11px; color: #888; }
+  .sig-line { border-bottom: 1px solid #999; width: 100px; height: 28px; }
+
+  /* Memo */
+  .memo-textarea {
+    width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Noto Serif SC', serif; font-size: 12px;
+    padding: 12px; border-radius: 2px; outline: none; resize: none; height: 120px;
+    line-height: 1.7; margin-bottom: 14px;
+  }
+  .memo-list { display: flex; flex-direction: column; gap: 8px; }
+  .memo-item { background: rgba(125,211,200,0.04); border: 1px solid rgba(125,211,200,0.1); border-radius: 2px; padding: 10px 12px; }
+  .memo-text { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 4px; }
+  .memo-time { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted2); }
+
+  /* History */
+  .hist-item {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid var(--border2);
+  }
+  .hist-icon { width: 24px; height: 24px; border-radius: 2px; background: rgba(245,158,107,0.1); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
+  .hist-info { flex: 1; }
+  .hist-name { font-size: 12px; color: var(--text); margin-bottom: 3px; }
+  .hist-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted2); }
+  .hist-badge { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--green); background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.2); padding: 2px 6px; border-radius: 2px; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <a class="back-link" href="index.html">返回主页</a>
+    <span style="color:var(--border)">|</span>
+    <span class="project-label">桌面端 · Electron</span>
+    <span class="project-name-top">DocFiller</span>
+  </div>
+  <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;">Electron · React · TypeScript · Zustand</span>
+</div>
+
+<!-- Electron-style app titlebar -->
+<div class="app-titlebar">
+  <div class="app-titlebar-left">
+    <div class="app-logo">Doc<span>Filler</span></div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="setMode(this,'fill')">填写模式</button>
+      <button class="mode-btn" onclick="setMode(this,'map')">映射模式</button>
+    </div>
+  </div>
+  <div class="titlebar-actions">
+    <button class="tb-btn">导入模版</button>
+    <button class="tb-btn">导出快照</button>
+    <button class="tb-btn primary" onclick="exportAction()">生成文档</button>
+  </div>
+</div>
+
+<!-- Three-column app shell -->
+<div class="app-shell">
+
+  <!-- Left col -->
+  <div class="left-col">
+    <div class="col-section" style="flex:0 0 auto; max-height:45%;">
+      <div class="col-header">
+        <span class="col-header-title">模版库</span>
+        <button class="col-add-btn">＋</button>
+      </div>
+      <div class="col-list">
+        <div class="tpl-item active" onclick="selectTpl(this)">
+          <div class="tpl-icon" style="background:rgba(245,158,107,0.12); color:var(--accent3)">📋</div>
+          <div class="tpl-info">
+            <div class="tpl-name">劳动合同（标准）</div>
+            <div class="tpl-meta">12 字段 · docx</div>
+          </div>
+        </div>
+        <div class="tpl-item" onclick="selectTpl(this)">
+          <div class="tpl-icon" style="background:rgba(125,211,200,0.1); color:var(--accent)">📄</div>
+          <div class="tpl-info">
+            <div class="tpl-name">入职登记表</div>
+            <div class="tpl-meta">8 字段 · xlsx</div>
+          </div>
+        </div>
+        <div class="tpl-item" onclick="selectTpl(this)">
+          <div class="tpl-icon" style="background:rgba(167,139,250,0.1); color:var(--accent2)">📝</div>
+          <div class="tpl-info">
+            <div class="tpl-name">项目验收报告</div>
+            <div class="tpl-meta">9 字段 · docx</div>
+          </div>
+        </div>
+        <div class="tpl-item" onclick="selectTpl(this)">
+          <div class="tpl-icon" style="background:rgba(74,222,128,0.1); color:var(--green)">🗂️</div>
+          <div class="tpl-info">
+            <div class="tpl-name">采购申请单</div>
+            <div class="tpl-meta">6 字段 · xlsx</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-section flex1" style="border-top:1px solid var(--border)">
+      <div class="col-header">
+        <span class="col-header-title">文档列表</span>
+        <button class="col-add-btn">＋</button>
+      </div>
+      <div class="col-list">
+        <div class="doc-item active">
+          <div class="doc-status" style="background:var(--accent3)"></div>
+          <div class="doc-name">张三 · 2026-01</div>
+          <div class="doc-pct">75%</div>
+        </div>
+        <div class="doc-item" onclick="selectDoc(this)">
+          <div class="doc-status" style="background:var(--green)"></div>
+          <div class="doc-name">李四 · 2026-01</div>
+          <div class="doc-pct">100%</div>
+        </div>
+        <div class="doc-item" onclick="selectDoc(this)">
+          <div class="doc-status" style="background:var(--muted2)"></div>
+          <div class="doc-name">王五 · 2026-01</div>
+          <div class="doc-pct">20%</div>
+        </div>
+        <div class="doc-item" onclick="selectDoc(this)">
+          <div class="doc-status" style="background:var(--muted2)"></div>
+          <div class="doc-name">赵六 · 2026-02</div>
+          <div class="doc-pct">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center col: fill form -->
+  <div class="center-col">
+    <div class="center-header">
+      <div class="center-title">劳动合同（标准）· 张三</div>
+      <div class="progress-pill" id="progressPill">9 / 12 已填</div>
+    </div>
+    <div class="field-list">
+
+      <div class="field-group">
+        <div class="field-label">甲方（用人单位）<span class="field-required">*</span></div>
+        <input class="field-input filled" value="广州科技有限公司" oninput="updatePreview('company', this.value)">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">乙方姓名 <span class="field-required">*</span></div>
+          <input class="field-input filled" value="张三" oninput="updatePreview('name', this.value)">
+        </div>
+        <div class="field-group">
+          <div class="field-label">身份证号 <span class="field-required">*</span></div>
+          <input class="field-input filled" value="440101199001011234" oninput="updatePreview('id', this.value)">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">合同起始日期</div>
+          <input class="field-input filled" value="2026-02-01" type="text" oninput="updatePreview('startDate', this.value)">
+        </div>
+        <div class="field-group">
+          <div class="field-label">合同终止日期</div>
+          <input class="field-input filled" value="2028-01-31" type="text" oninput="updatePreview('endDate', this.value)">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">岗位名称 <span class="field-required">*</span></div>
+        <input class="field-input filled" value="产品经理" oninput="updatePreview('position', this.value)">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">月薪（元）</div>
+          <input class="field-input filled" value="12,000" oninput="updatePreview('salary', this.value)">
+        </div>
+        <div class="field-group">
+          <div class="field-label">试用期（月）</div>
+          <select class="field-select field-input filled" onchange="updatePreview('probation', this.value)">
+            <option>1</option>
+            <option selected>3</option>
+            <option>6</option>
+            <option>无</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">工作地点</div>
+        <input class="field-input filled" value="广州市天河区">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">备注说明</div>
+        <textarea class="field-input field-textarea" placeholder="如有特殊约定请在此说明…"></textarea>
+        <div class="field-hint">· 此字段可留空</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">联系电话 <span class="field-required">*</span></div>
+        <input class="field-input" placeholder="请填写联系电话" oninput="this.classList.add('filled')">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">紧急联系人</div>
+        <input class="field-input" placeholder="请填写紧急联系人姓名">
+      </div>
+
+      <div style="height:40px"></div>
+    </div>
+  </div>
+
+  <!-- Right col -->
+  <div class="right-col">
+    <div class="right-tabs">
+      <div class="right-tab active" onclick="switchRightTab(this,'preview')">预览</div>
+      <div class="right-tab" onclick="switchRightTab(this,'memo')">备忘录</div>
+      <div class="right-tab" onclick="switchRightTab(this,'history')">历史</div>
+    </div>
+
+    <!-- Preview -->
+    <div class="right-panel active" id="panel-preview">
+      <div class="preview-doc">
+        <h4>劳动合同书</h4>
+        <div class="preview-field">
+          <span class="pf-label">甲方</span>
+          <span class="pf-value" id="pv-company">广州科技有限公司</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">乙方</span>
+          <span class="pf-value" id="pv-name">张三</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">身份证</span>
+          <span class="pf-value" id="pv-id">440101199001011234</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">岗位</span>
+          <span class="pf-value" id="pv-position">产品经理</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">合同期限</span>
+          <span class="pf-value" id="pv-period">2026-02-01 至 2028-01-31</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">月薪</span>
+          <span class="pf-value" id="pv-salary">¥ 12,000 元</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">试用期</span>
+          <span class="pf-value" id="pv-probation">3 个月</span>
+        </div>
+        <div class="preview-field">
+          <span class="pf-label">工作地点</span>
+          <span class="pf-value">广州市天河区</span>
+        </div>
+        <div class="preview-sig">
+          <div><div style="margin-bottom:4px">甲方签章</div><div class="sig-line"></div></div>
+          <div><div style="margin-bottom:4px">乙方签字</div><div class="sig-line"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memo -->
+    <div class="right-panel" id="panel-memo">
+      <textarea class="memo-textarea" placeholder="在此记录注意事项、沟通记录或待确认内容…"></textarea>
+      <div class="memo-list">
+        <div class="memo-item">
+          <div class="memo-text">薪资已与 HR 确认，含绩效基数。试用期薪资按 80% 发放，请在备注中注明。</div>
+          <div class="memo-time">2026-01-18 14:32</div>
+        </div>
+        <div class="memo-item">
+          <div class="memo-text">联系电话待本人确认后补填，预计明日回复。</div>
+          <div class="memo-time">2026-01-18 10:05</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="right-panel" id="panel-history">
+      <div class="hist-item">
+        <div class="hist-icon">📤</div>
+        <div class="hist-info">
+          <div class="hist-name">张三_劳动合同_v3.docx</div>
+          <div class="hist-meta">2026-01-18 · 9 字段 · 生成快照</div>
+        </div>
+        <div class="hist-badge">最新</div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-icon">📤</div>
+        <div class="hist-info">
+          <div class="hist-name">张三_劳动合同_v2.docx</div>
+          <div class="hist-meta">2026-01-15 · 7 字段 · 生成快照</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-icon">📋</div>
+        <div class="hist-info">
+          <div class="hist-name">李四_劳动合同_final.docx</div>
+          <div class="hist-meta">2026-01-12 · 12 字段 · 完整导出</div>
+        </div>
+        <div class="hist-badge">完整</div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-icon">📋</div>
+        <div class="hist-info">
+          <div class="hist-name">李四_劳动合同_v1.docx</div>
+          <div class="hist-meta">2026-01-10 · 10 字段 · 生成快照</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchRightTab(el, id) {
+  document.querySelectorAll('.right-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.right-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+}
+
+function setMode(btn, mode) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function selectTpl(el) {
+  document.querySelectorAll('.tpl-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function selectDoc(el) {
+  document.querySelectorAll('.doc-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function updatePreview(field, val) {
+  const map = {
+    company: 'pv-company',
+    name: 'pv-name',
+    id: 'pv-id',
+    position: 'pv-position',
+    salary: 'pv-salary',
+    probation: 'pv-probation',
+    startDate: null,
+    endDate: null,
+  };
+  if (field === 'startDate' || field === 'endDate') {
+    // handled together
+    return;
+  }
+  if (map[field]) {
+    const el = document.getElementById(map[field]);
+    if (el) {
+      if (field === 'salary') el.textContent = '¥ ' + val + ' 元';
+      else if (field === 'probation') el.textContent = val + ' 个月';
+      else el.textContent = val || '—';
+    }
+  }
+}
+
+function exportAction() {
+  const btn = document.querySelector('.tb-btn.primary');
+  btn.textContent = '生成中…';
+  btn.style.background = 'var(--accent3)';
+  setTimeout(() => {
+    btn.textContent = '✓ 已生成';
+    btn.style.background = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = '生成文档';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  }, 900);
+}
+</script>
+</body>
+</html>
