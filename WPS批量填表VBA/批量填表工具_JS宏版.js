@@ -126,13 +126,38 @@ function readDataSource(path) {
 
     var map = {};
     var tbl = doc.Tables.Item(1);
-    var rows = tbl.Rows.Count;
-    for (var r = 1; r <= rows; r++) {
-        var key = cleanCell(tbl.Cell(r, 1).Range.Text);
-        var val = cleanCell(tbl.Cell(r, 2).Range.Text);
-        if (key != "" && key.indexOf("字段名") != 0) {
-            map[key] = val;
+
+    // 方案A：按行遍历单元格
+    try {
+        var rowsCol = tbl.Rows;
+        var nr = rowsCol.Count;
+        for (var r = 1; r <= nr; r++) {
+            var key = "", val = "";
+            try {
+                var cells = rowsCol.Item(r).Cells;
+                if (cells.Count >= 1) key = cleanCell(cells.Item(1).Range.Text);
+                if (cells.Count >= 2) val = cleanCell(cells.Item(2).Range.Text);
+            } catch (e1) { continue; }
+            if (key != "" && key.indexOf("字段名") != 0) map[key] = val;
         }
+    } catch (eA) { /* 落到方案B */ }
+
+    // 方案B兜底：若方案A没读到任何字段，直接读整张表文本按单元格标记拆分
+    if (countKeys(map) == 0) {
+        try {
+            var raw = "" + tbl.Range.Text;
+            // Word 单元格之间用 \x07（BEL）分隔，按它拆分后两两配对
+            var parts = raw.split("\x07");
+            var cellsArr = [];
+            for (var p = 0; p < parts.length; p++) {
+                cellsArr.push(cleanCell(parts[p]));
+            }
+            // 去掉末尾可能的空项后两两配对：偶数=字段名，奇数=值
+            for (var q = 0; q + 1 < cellsArr.length; q += 2) {
+                var k2 = cellsArr[q], v2 = cellsArr[q + 1];
+                if (k2 != "" && k2.indexOf("字段名") != 0) map[k2] = v2;
+            }
+        } catch (eB) { /* 忽略 */ }
     }
 
     if (!opened) doc.Close(0);   // 0 = 不保存
@@ -173,15 +198,19 @@ function fillOneDoc(srcPath, map, keys, outPath) {
 // 工具函数
 // ─────────────────────────────────────────────────────────────────────────────
 
-// 去掉 Word 单元格文本末尾的控制字符(\r \x07)并 trim
+// 统计字典里的字段数
+function countKeys(obj) {
+    var n = 0;
+    for (var k in obj) n++;
+    return n;
+}
+
+// 去掉 Word 单元格文本首尾的控制字符(\r \x07 \n)并 trim
 function cleanCell(s) {
     if (s == null) return "";
     s = String(s);
-    while (s.length > 0) {
-        var c = s.charCodeAt(s.length - 1);
-        if (c == 13 || c == 7 || c == 10) s = s.substring(0, s.length - 1);
-        else break;
-    }
+    // 去掉所有控制字符(BEL/CR/LF)再 trim
+    s = s.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "");
     return s.replace(/^\s+|\s+$/g, "");
 }
 
