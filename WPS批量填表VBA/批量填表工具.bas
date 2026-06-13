@@ -133,11 +133,12 @@ Sub 创建数据源模板()
     Set rng = doc.Paragraphs.Last.Range
 
     Dim tbl As Table
+    ' 字段名对应目标文档里的 {{占位符}}（不含大括号）
     Dim fieldList As Variant
     fieldList = Array( _
-        "姓名", "性别", "出生日期", "民族", "身份证号", "联系电话", _
-        "户籍地址", "现居住地址", "工作单位", "职务", "学历", "政治面貌", _
-        "婚姻状况", "退休日期", "社保编号", "参保单位", "银行账号", "备注" _
+        "姓名", "性别", "户籍省市", "户籍地址", "手机号", "身份证号码", _
+        "最后缴费年月", "开户银行", "社保卡号", _
+        "家属名字", "家属身份证号", "家属电话" _
     )
 
     Set tbl = doc.Tables.Add(rng, UBound(fieldList) + 2, 2)
@@ -249,7 +250,11 @@ Function FillDocument(srcPath As String, _
     Dim applied As Object
     Set applied = CreateObject("Scripting.Dictionary")
 
-    '── 扫描表格，匹配标签并写入 ────────────────────────────────────────────
+    '── 主路径：占位符替换 {{字段名}} → 值 ─────────────────────────────────────
+    '   这是最可靠的方式，精确匹配、不受合并单元格影响、可跨文字片段
+    ReplacePlaceholders doc, fieldMap, applied
+
+    '── 回退路径：对没有占位符标记的普通文档，做"标签→空白格"智能识别 ──────────
     Dim tbl As Table
     For Each tbl In doc.Tables
         Dim rw As Row
@@ -301,6 +306,40 @@ ErrHandler:
     doc.Close SaveChanges:=False
 
 End Function
+
+
+' ─────────────────────────────────────────────────────────────────────────────
+'  占位符替换：把文档里所有 {{字段名}} 替换为数据源对应的值
+'  覆盖正文、表格、文本框、页眉页脚等所有区域
+' ─────────────────────────────────────────────────────────────────────────────
+Sub ReplacePlaceholders(doc As Document, fieldMap As Object, applied As Object)
+    Dim key As Variant
+    For Each key In fieldMap.Keys
+        Dim lbl As String:  lbl = CStr(key)
+        Dim val As String:  val = CStr(fieldMap(key))
+        Dim ph As String:   ph = "{{" & lbl & "}}"
+
+        ' 遍历文档所有 StoryRange（正文、表格、文本框、页眉页脚都包含在内）
+        Dim story As Range
+        For Each story In doc.StoryRanges
+            Dim rng As Range
+            Set rng = story.Duplicate
+            With rng.Find
+                .ClearFormatting
+                .Replacement.ClearFormatting
+                .Text = ph
+                .Replacement.Text = val        ' 值为空时等于删除占位符
+                .Forward = True
+                .Wrap = wdFindContinue
+                .MatchWildcards = False
+                .MatchCase = False
+                If .Execute(Replace:=wdReplaceAll) Then
+                    applied(lbl) = True
+                End If
+            End With
+        Next story
+    Next key
+End Sub
 
 
 ' ─────────────────────────────────────────────────────────────────────────────
